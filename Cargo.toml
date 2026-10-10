@@ -26,9 +26,9 @@ panic = "abort"
 split-debuginfo = "packed"
 
 # Snapdragon 7 Gen 3 (ARM64 v8.2) specific optimization
+# FIXED: Removed 'lto' from package profile as it's not allowed there
 [profile.release.package."*"]
 opt-level = 3
-lto = true
 codegen-units = 1
 
 [target.'cfg(target_os = "android")'.dependencies]
