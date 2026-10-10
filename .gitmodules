@@ -1,0 +1,9 @@
+[submodule "patches/smithay"]
+	path = patches/smithay
+	url = https://github.com/Smithay/smithay.git
+[submodule "patches/winit"]
+	path = patches/winit
+	url = https://github.com/rust-windowing/winit.git
+[submodule "patches/xbuild"]
+	path = patches/xbuild
+	url = https://github.com/rust-mobile/xbuild.git
