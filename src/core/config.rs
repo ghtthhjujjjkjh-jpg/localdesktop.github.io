@@ -13,11 +13,8 @@ pub const ARCH_FS_ROOT: &str = "/data/local/tmp/arch";
 
 pub const ARCH_FS_ARCHIVE: &str = "https://github.com/termux/proot-distro/releases/download/v4.29.0/archlinux-aarch64-pd-v4.29.0.tar.xz";
 
-/// Project homepage, also the online documentation entry point.
 pub const DOCS_HOME_URL: &str = "https://localdesktop.github.io/";
 
-/// Download URL for the offline User Manual PDF matching the running version.
-/// The release asset is dot-free/hyphenated (GitHub turns spaces into dots).
 pub fn user_manual_url() -> String {
     format!(
         "https://github.com/localdesktop/localdesktop.github.io/releases/download/v{VERSION}/Local-Desktop-v{VERSION}-User-Manual.pdf"
@@ -25,32 +22,16 @@ pub fn user_manual_url() -> String {
 }
 
 pub const WAYLAND_SOCKET_NAME: &str = "wayland-0";
-
 pub const MAX_PANEL_LOG_ENTRIES: usize = 100;
-
 pub const SENTRY_DSN: &str = "https://d8af27f864ade027ff81ecadea91b02e@o4509548388417536.ingest.de.sentry.io/4509548392480848";
-
-/// PipeWire runtime path as seen from inside the proot guest.
 pub const PIPEWIRE_GUEST_RUNTIME_DIR: &str = "/tmp";
-
-/// PipeWire-Pulse socket as seen from inside the proot guest.
 pub const PULSE_GUEST_SERVER: &str = "unix:/tmp/pulse/native";
-
-/// Make sure the config keys are all lowercase, and config values are single-line. Use \n for multi-line config values if needed
-/// If a key exists multiple time, the first entry is applied
-/// If a `try_` config exsists multiple time, the last entry is applied
-/// But in general, it is **invalid** to have duplicated config keys inside a TOML file
 pub const CONFIG_FILE: &str = "/etc/localdesktop/localdesktop.toml";
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct LocalConfig {
     #[serde(default)]
     pub user: UserConfig,
-
-    /// What happens if we don't assign this `#[serde(default)]` attribute?
-    /// The answer: If the user omits the `[command]` group, the WHOLE config fails to parse
-    /// => The default `[user]` group is applied (with `username=root`) even if the `[user]` settings are completely valid.
-    /// => So make sure that every config group has a `#[serde(default)]` attribute to avoid invalid sections breaking unrelated parts of the config.
     #[serde(default)]
     pub command: CommandConfig,
 }
@@ -79,17 +60,20 @@ pub struct CommandConfig {
 }
 
 fn default_check() -> String {
-    "pacman -Qg plasma"
+    // KDE Plasma + Gaming + Translators verification
+    "pacman -Qg plasma && pacman -Q xdg-desktop-portal-kde && pacman -Q vulkan-tools && pacman -Q wine-mono && pacman -Q fish && pacman -Q bat && pacman -Q exa"
         .to_string()
 }
 
 fn default_install() -> String {
-    "stdbuf -oL pacman -Syu plasma --noconfirm --noprogressbar"
+    // Gaming-optimized installation for Snapdragon 7 Gen 3 tablet
+    "stdbuf -oL pacman -Syu plasma xdg-desktop-portal-kde xdg-desktop-portal vulkan-tools vulkan-icd-loader wine-mono wine-gecko wine-staging winetricks flatpak fish bat exa ripgrep fd fzf tmux helix python-pip pipewire pipewire-pulse pipewire-alsa wireplumber pavucontrol --noconfirm --noprogressbar"
         .to_string()
 }
-/// Direct the desktop session to the compositor and the host PipeWire socket.
+
 fn default_launch() -> String {
-    "XDG_RUNTIME_DIR=/tmp WAYLAND_DISPLAY=wayland-0 /usr/lib/plasma-dbus-run-session-if-needed startplasma-wayland 2>&1"
+    // KDE Plasma Wayland optimized for Snapdragon 7 Gen 3 (Adreno 720) with Vulkan
+    format!("export PIPEWIRE_RUNTIME_DIR={PIPEWIRE_GUEST_RUNTIME_DIR} PULSE_SERVER={PULSE_GUEST_SERVER}; export QT_QPA_PLATFORM=wayland QT_QPA_PLATFORMTHEME=kde KWIN_COMPOSE=O2 GALLIUM_DRIVER=zink VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/adreno.json MESA_SHADER_CACHE_DIR=/tmp/mesa-cache; mkdir -p /tmp/mesa-cache; XDG_RUNTIME_DIR=/tmp WAYLAND_DISPLAY=wayland-0 /usr/lib/plasma-dbus-run-session-if-needed startplasma-wayland 2>&1")
         .to_string()
 }
 
@@ -103,11 +87,6 @@ impl Default for CommandConfig {
     }
 }
 
-/// This function does 2 major tasks:
-/// - Read config from `CONFIG_FILE`, and override configs with their `try_*` versions, and return the configs line by line
-/// - Write back to the config file, with `try_*` configs commented out
-///
-/// **Important**: As each call to this function will comment out the `try_*` config, it is **non-idempotent**.
 fn process_config_file(full_config_path: String) -> Vec<String> {
     let mut write_back_lines: Vec<String> = vec![];
     let mut effective_config: Vec<String> = vec![];
@@ -121,57 +100,43 @@ fn process_config_file(full_config_path: String) -> Vec<String> {
                 let value = value.trim();
 
                 if key.starts_with("try_") {
-                    // Comment out the `try_*` configs
                     write_back_lines.push(format!("# {}", trimmed));
-
-                    // Prefer the `try_*` configs
                     let actual_key = key.trim_start_matches("try_");
                     if let Some(line_index) = effective_config
                         .iter()
                         .position(|line| line.starts_with(&format!("{}=", actual_key)))
                     {
-                        // Config exists, overriding
                         effective_config[line_index] = format!("{}={}", actual_key, value);
                     } else {
-                        // Config does not exist, appending
                         effective_config.push(format!("{}={}", actual_key, value));
-                        // Make sure there are no spaces around = so that the check existing key logic works
                     }
                 } else {
-                    // Keep the config as is
                     write_back_lines.push(trimmed.to_string());
-
-                    if effective_config
+                    if !effective_config
                         .iter()
                         .any(|line| line.starts_with(&format!("{}=", key)))
                     {
-                        // If already overridden by try_ version, skip inserting
-                    } else {
-                        // Config does not exist, appending
-                        effective_config.push(format!("{}={}", key, value)); // Make sure there are no spaces around = so that the check existing key logic works
+                        effective_config.push(format!("{}={}", key, value));
                     }
                 }
             } else {
-                // Keep the line as is
                 write_back_lines.push(trimmed.to_string());
                 effective_config.push(trimmed.to_string());
             }
         }
 
-        // Rewrite config with try_* lines commented out
         let _ = OpenOptions::new()
             .write(true)
             .truncate(true)
             .open(&full_config_path)
             .and_then(|mut file| {
                 for line in &write_back_lines {
-                    writeln!(file, "{}", line)?;
+                    writeln!(file, "{}", line)?
                 }
                 Ok(())
             });
     }
 
-    // Convert effective config back to lines
     effective_config
 }
 
@@ -181,9 +146,7 @@ pub fn parse_config(full_config_path: String) -> LocalConfig {
     if let Ok(config) = toml::from_str::<LocalConfig>(&content) {
         return config;
     }
-    // Config malformed, use the default config and the user can modify it again
-    let default_config = LocalConfig::default();
-    default_config
+    LocalConfig::default()
 }
 
 #[cfg(test)]
@@ -258,17 +221,10 @@ mod tests {
                 try_check = "try"
             "#,
             |full_config_path| {
-                let _ = parse_config(full_config_path.clone()); // This triggers rewriting the config file
+                let _ = parse_config(full_config_path.clone());
                 let content = fs::read_to_string(full_config_path).unwrap();
-
-                assert!(
-                    content.contains("# try_username = \"commented\""),
-                    "❌ `try_username` is not commented out after being applied"
-                );
-                assert!(
-                    content.contains("# try_check = \"try\""),
-                    "❌ `try_check` is not commented out after being  applied"
-                );
+                assert!(content.contains("# try_username = \"commented\""));
+                assert!(content.contains("# try_check = \"try\""));
             },
         );
     }

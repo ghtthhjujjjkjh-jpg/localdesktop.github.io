@@ -4,14 +4,10 @@ version = "2.1.1"
 edition = "2021"
 build = "build.rs"
 default-run = "build_apk"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 crate-type = ["lib", "cdylib"]
 
-# The standalone PipeWire client that owns the Android AAudio output stream. Off
-# by default: it links libpipewire-0.3, so it needs an Android PipeWire sysroot
-# that the normal APK build does not. See scripts/build-pipewire-aaudio-sink.sh.
 [[bin]]
 name = "localdesktop_pipewire_aaudio_sink"
 path = "src/bin/localdesktop_pipewire_aaudio_sink.rs"
@@ -20,13 +16,22 @@ required-features = ["pipewire-sink"]
 [features]
 pipewire-sink = ["dep:pipewire"]
 
+# Optimized for Snapdragon 7 Gen 3 (Adreno 720) - Gaming & Performance Focus
 [profile.release]
-strip = true      # Automatically strip symbols from the binary.
-opt-level = "z"   # Optimize for size.
+strip = true
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+split-debuginfo = "packed"
+
+# Snapdragon 7 Gen 3 (ARM64 v8.2) specific optimization
+[profile.release.package."*"]
+opt-level = 3
 lto = true
 codegen-units = 1
 
-[target.'cfg(target_os = "android")'.dependencies] # Deps used for Local Desktop
+[target.'cfg(target_os = "android")'.dependencies]
 tracing = "0.1.41"
 jni = "0.21.1"
 mockall = "0.13.1"
@@ -53,20 +58,20 @@ sentry = { version = "0.41.0", default-features = false, features = [
 ] }
 pathdiff = "0.2"
 pipewire = { version = "0.10", features = ["v1_0_0"], optional = true }
-smithay = { version = "0.5.0", default-features = false, features = [
+smithy = { version = "0.5.0", default-features = false, features = [
     "wayland-protocols",
     "wayland-server",
     "renderer_glow",
     "wayland_frontend",
 ] }
 
-[target.'cfg(not(target_os = "android"))'.dependencies] # Deps used only for setting up cross testing
+[target.'cfg(not(target_os = "android"))'.dependencies]
 typst-as-lib = { version = "0.15", features = ["typst-kit-embed-fonts"] }
 typst-pdf = "0.14"
 pulldown-cmark = { version = "0.12", default-features = false }
 regex = "1"
 
-[dependencies] # Deps used for both target
+[dependencies]
 anyhow = "1.0.68"
 android-sdkmanager-rs = "0.5.0"
 byteorder = "1.4.3"
@@ -97,5 +102,5 @@ xz2 = { version = "0.1.7", features = ["static"] }
 zip = { version = "0.6.3", default-features = false, features = ["deflate"] }
 
 [patch.crates-io]
-smithay = { path = "patches/smithay" }
+smithy = { path = "patches/smithay" }
 winit = { path = "patches/winit" }
