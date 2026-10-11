@@ -104,6 +104,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup Gradle 8.14.3
         uses: gradle/actions/setup-gradle@v4
