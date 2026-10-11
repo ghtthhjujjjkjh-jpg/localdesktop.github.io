@@ -213,14 +213,14 @@ jobs:
     
       - name: Setup Android Cross-Compiler
         run: |
-         NDK_BIN=$PWD/android-ndk-r28/toolchains/llvm/prebuilt/linux-x86_64/bin
-         API_LEVEL=35
-         echo "CC_aarch64-linux-android=$NDK_BIN/aarch64-linux-android${API_LEVEL}-clang" >> "$GITHUB_ENV"
-         echo "CXX_aarch64-linux-android=$NDK_BIN/aarch64-linux-android${API_LEVEL}-clang++" >> "$GITHUB_ENV"
-         echo "AR_aarch64-linux-android=$NDK_BIN/llvm-ar" >> "$GITHUB_ENV"
-         echo "RANLIB_aarch64-linux-android=$NDK_BIN/llvm-ranlib" >> "$GITHUB_ENV"
-         echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$NDK_BIN/aarch64-linux-android${API_LEVEL}-clang" >> "$GITHUB_ENV"
-         echo "$NDK_BIN" >> "$GITHUB_PATH"
+          NDK_BIN=$PWD/android-ndk-r28/toolchains/llvm/prebuilt/linux-x86_64/bin
+          API_LEVEL=35
+          echo "CC_aarch64-linux-android=$NDK_BIN/aarch64-linux-android${API_LEVEL}-clang" >> "$GITHUB_ENV"
+          echo "CXX_aarch64-linux-android=$NDK_BIN/aarch64-linux-android${API_LEVEL}-clang++" >> "$GITHUB_ENV"
+          echo "AR_aarch64-linux-android=$NDK_BIN/llvm-ar" >> "$GITHUB_ENV"
+          echo "RANLIB_aarch64-linux-android=$NDK_BIN/llvm-ranlib" >> "$GITHUB_ENV"
+          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$NDK_BIN/aarch64-linux-android${API_LEVEL}-clang" >> "$GITHUB_ENV"
+          echo "$NDK_BIN" >> "$GITHUB_PATH"
       
       - name: Build xbuild
         working-directory: patches/xbuild
