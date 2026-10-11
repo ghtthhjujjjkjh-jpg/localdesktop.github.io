@@ -103,6 +103,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:  
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      
       - name: Fix submodules and clone smithay manually
         run: |
           git rm --cached patches/vscode-android-debug 2>/dev/null || true
