@@ -25,9 +25,6 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-  ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-  ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
 jobs:
   validate-release-label:
@@ -158,13 +155,6 @@ jobs:
         run: |
           git log -1 --pretty=%B > "${{ steps.release_notes.outputs.path }}"
 
-      - name: Setup signing keystore
-        run: |
-          mkdir -p target/x/release/android/gradle/app
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > target/x/release/android/gradle/app/release-key.jks
-          # Verify keystore
-          keytool -list -v -keystore target/x/release/android/gradle/app/release-key.jks -storepass $ANDROID_KEYSTORE_PASSWORD
-
       - name: Update manifest.yaml to target API 35
         run: |
           sed -i 's/target_sdk_version: 33/target_sdk_version: 35/' manifest.yaml
@@ -209,7 +199,6 @@ jobs:
       - name: Rename APK
         run: |
           mv target/x/release/android/gradle/app/build/outputs/apk/debug/app-debug.apk target/x/localdesktop-${{ steps.extract_version.outputs.version }}-debug.apk
-          mv target/x/release/android/gradle/app/build/outputs/apk/release/app-release.apk target/x/localdesktop-${{ steps.extract_version.outputs.version }}.apk
 
       - name: Prepare PR APK artifact
         id: pr_apk_artifact
@@ -237,16 +226,7 @@ jobs:
           path: ${{ steps.pr_apk_artifact.outputs.path }}
           if-no-files-found: error
           archive: false
-
-      - name: Build AAB
-        if: github.event_name != 'pull_request'
-        run: x build --release --platform=android --arch=arm64 --format=aab
-
-      - name: Rename AAB
-        if: github.event_name != 'pull_request'
-        run: |
-          mv target/x/release/android/gradle/app/build/outputs/bundle/debug/app-debug.aab target/x/localdesktop-${{ steps.extract_version.outputs.version }}-debug.aab
-          mv target/x/release/android/gradle/app/build/outputs/bundle/release/app-release.aab target/x/localdesktop-${{ steps.extract_version.outputs.version }}.aab
+          
       - name: Build User Manual PDFs
         if: github.ref_type == 'tag'
         run: |
@@ -278,13 +258,4 @@ jobs:
           tag_name: v${{ steps.extract_version.outputs.version }}
           body_path: ${{ steps.release_notes.outputs.path }}
           files: |
-            target/x/localdesktop-${{ steps.extract_version.outputs.version }}.apk
             target/x/localdesktop-${{ steps.extract_version.outputs.version }}-debug.apk
-            target/x/localdesktop-${{ steps.extract_version.outputs.version }}.aab
-            target/x/localdesktop-${{ steps.extract_version.outputs.version }}-debug.aab
-            manuals/Local-Desktop-v${{ steps.extract_version.outputs.version }}-User-Manual.pdf
-            manuals/Local-Desktop-v${{ steps.extract_version.outputs.version }}-User-Manual-Dark.pdf
-            manuals/Local-Desktop-v${{ steps.extract_version.outputs.version }}-User-Manual-Fold.pdf
-            manuals/Local-Desktop-v${{ steps.extract_version.outputs.version }}-User-Manual-Fold-Dark.pdf
-            manuals/Local-Desktop-v${{ steps.extract_version.outputs.version }}-User-Manual-Phone.pdf
-            manuals/Local-Desktop-v${{ steps.extract_version.outputs.version }}-User-Manual-Phone-Dark.pdf
