@@ -103,15 +103,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:  
-      - uses: actions/checkout@v4
-        with:
-          submodules: false
-      - name: Fix broken submodules and fetch required ones
+      - name: Fix submodules and clone smithay manually
         run: |
           git rm --cached patches/vscode-android-debug 2>/dev/null || true
           rm -rf patches/vscode-android-debug 2>/dev/null || true
-          git submodule sync --recursive
-          git submodule update --init --recursive --force
+          git submodule sync --recursive || true
+          git submodule update --init --recursive --force || true
+          if [ ! -f "patches/smithay/Cargo.toml" ]; then
+            echo "smithay missing, cloning manually..."
+            rm -rf patches/smithay
+            git clone --depth 1 https://github.com/Smithay/smithay.git patches/smithay
+          fi
+          if [ ! -f "patches/smithay/Cargo.toml" ]; then
+            echo "Failed to fetch smithay"
+            exit 1
+          fi
+          echo "smithay is ready"
           
       - name: Setup Gradle 8.14.3
         uses: gradle/actions/setup-gradle@v4
