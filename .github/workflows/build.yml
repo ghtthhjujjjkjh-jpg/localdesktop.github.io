@@ -104,8 +104,8 @@ jobs:
 
     steps:  
       - uses: actions/checkout@v4
-       with:
-         submodules: false
+        with:
+          submodules: false
       - name: Fix broken submodules and fetch required ones
         run: |
           git rm --cached patches/vscode-android-debug 2>/dev/null || true
