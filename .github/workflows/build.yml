@@ -189,6 +189,9 @@ jobs:
           mkdir -p ~/.cache/x/
           mv Android.ndk ~/.cache/x/
 
+      - name: Install Rust target for Android
+        run: rustup target add aarch64-linux-android
+
       - name: Build xbuild
         working-directory: patches/xbuild
         run: cargo install --path xbuild
