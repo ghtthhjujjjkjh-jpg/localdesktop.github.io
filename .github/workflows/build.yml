@@ -194,7 +194,7 @@ jobs:
         run: cargo install --path xbuild
 
       - name: Build APK
-        run: x build --release --platform=android --arch=arm64 --format=apk
+        run: x build --platform=android --arch=arm64 --format=apk
 
       - name: Rename APK
         run: |
@@ -214,9 +214,9 @@ jobs:
             SAFE_REF="pr-${PR_NUMBER}"
           fi
           SHORT_SHA="${HEAD_SHA:0:7}"
-          ARTIFACT_FILE="localdesktop-${VERSION}-${SAFE_REF}-${SHORT_SHA}-release.apk"
+          ARTIFACT_FILE="localdesktop-${VERSION}-${SAFE_REF}-${SHORT_SHA}-debug.apk"
           ARTIFACT_PATH="target/x/${ARTIFACT_FILE}"
-          cp "target/x/localdesktop-${VERSION}.apk" "$ARTIFACT_PATH"
+          cp "target/x/localdesktop-${VERSION}-debug.apk" "$ARTIFACT_PATH"
           echo "path=${ARTIFACT_PATH}" >> "$GITHUB_OUTPUT"
 
       - name: Upload PR release APK
@@ -230,7 +230,7 @@ jobs:
       - name: Build User Manual PDFs
         if: github.ref_type == 'tag'
         run: |
-          # All-Rust: Typst renders the PDF, the image crate handles webp — no
+          # All-Rust: Typst renders the PDF, the image crate handles — no
           # pandoc/LaTeX/Python, no apt packages needed. Six variants: every
           # size (desktop/fold/phone) × theme (light/dark).
           V="${{ steps.extract_version.outputs.version }}"
